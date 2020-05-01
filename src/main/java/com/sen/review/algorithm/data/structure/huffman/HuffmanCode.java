@@ -1,5 +1,11 @@
 package com.sen.review.algorithm.data.structure.huffman;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -16,7 +22,7 @@ public class HuffmanCode {
     /**
      * 用于存放字符--出现次数
      */
-    private static final Map<Byte, String> HUFFMAN_CODE = new HashMap<>();
+    private static Map<Byte, String> HUFFMAN_CODE = new HashMap<>();
 
     /**
      * 标记解压时最后一位是否需要补位，false--不补，true--补位
@@ -24,20 +30,27 @@ public class HuffmanCode {
     private static boolean lastFlag = false;
 
     public static void main(String[] args) {
-        String message = "i like like like java do you like a java iaa";
+        // i like like like java do you like a java iaa
+        String message = "i like like like java do you like a java";
         byte[] bytes = message.getBytes();
-        List<Node> nodes = countChar(bytes);
-        Node root = createHuffmanTree(nodes);
+        // List<Node> nodes = countChar(bytes);
+        // Node root = createHuffmanTree(nodes);
         // 测试代码
         // root.preOrder();
-        createHuffmanCode(root);
+        // createHuffmanCode(root);
         // HUFFMAN_CODE.forEach((k,v)->{
         //     System.out.println(k+": " + v);
         // });
-        byte[] encode = encode(bytes);
-        System.out.println(encode.length);
+        // byte[] encode = encode(bytes);
+        // System.out.println(encode.length);
+
+        /*byte[] encode = zip(bytes);
         byte[] decode = decode(encode);
-        System.out.println("解压后的结果：" + new String(decode));
+        System.out.println("解压后的结果：" + new String(decode));*/
+
+        // 压缩文件
+        // zipFile("ASCII.gif", "ASCII.zip");
+        unzipFile("ASCII.zip","ascii2.gif");
     }
 
     private static class Node implements Comparable<Node> {
@@ -291,5 +304,71 @@ public class HuffmanCode {
             strBinary = strBinary.substring(strBinary.length() - 8);
         }
         return strBinary;
+    }
+
+    /**
+     * 使用赫夫曼编码压缩(封装了构建赫夫曼树、创建赫夫曼编码表过程)
+     *
+     * @param datum 字节数组
+     * @return 压缩后的字节数组
+     */
+    private static byte[] zip(byte[] datum) {
+        List<Node> nodes = countChar(datum);
+        Node root = createHuffmanTree(nodes);
+        createHuffmanCode(root);
+        return encode(datum);
+    }
+
+    /**
+     * 压缩文件
+     *
+     * @param source 源文件路径
+     * @param target 压缩后存放路径
+     */
+    private static void zipFile(String source, String target) {
+
+        try (
+                FileInputStream inputStream = new FileInputStream(new File(source));
+                FileOutputStream outputStream = new FileOutputStream(new File(target));
+                ObjectOutputStream oos = new ObjectOutputStream(outputStream)
+        ) {
+            // 创建存储数据的中间数组
+            byte[] datum = new byte[inputStream.available()];
+            // 一次写入中间数组
+            inputStream.read(datum);
+            // 进行压缩
+            byte[] zip = zip(datum);
+            // 把压缩后的内容写回磁盘
+            oos.writeObject(zip);
+            // 把赫夫曼编码写进磁盘
+            oos.writeObject(HUFFMAN_CODE);
+        } catch (IOException fileNotFoundException) {
+            fileNotFoundException.printStackTrace();
+        }
+    }
+
+    /**
+     * 解压文件
+     *
+     * @param source 源文件路径
+     * @param target 压缩后存放路径
+     */
+    private static void unzipFile(String source, String target) {
+        try (
+                FileInputStream inputStream = new FileInputStream(new File(source));
+                ObjectInputStream ois = new ObjectInputStream(inputStream);
+                FileOutputStream outputStream = new FileOutputStream(new File(target))
+        ) {
+            // 从源文件中读取压缩后的字节数组
+            byte[] datum = (byte[]) ois.readObject();
+            // 从源文件中读出赫夫曼编码表
+            HUFFMAN_CODE = (Map<Byte, String>) ois.readObject();
+            // 进行解压
+            byte[] decode = decode(datum);
+            // 把解解压后的数据写回硬盘
+            outputStream.write(decode);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 }
